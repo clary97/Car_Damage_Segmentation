@@ -88,11 +88,11 @@ def Do_Experiment(seed, model_name, model, train_loader, val_loader, test_loader
 
     total_time = time.time() - total_start
 
-    # 평가: 테스트 데이터셋
+    # evaluate : test dataset
     model.load_state_dict(best_model_state)
     test_loss, test_dice, test_iou = evaluate(model, test_loader, device)
 
-    # 결과 저장
+    # save results
     result = {
         'Experiment Time': time.strftime('%y%m%d_%H%M%S'),
         'Train Time': f"{total_time:.1f}s",

@@ -141,4 +141,4 @@ class AlignedXception(nn.Module):
                 m.bias.data.zero_()
 
     def _load_pretrained_model(self):
-        pass  # 구현 생략 또는 모델 허브에서 불러오기
+        pass  # skip implementation or load from model hub

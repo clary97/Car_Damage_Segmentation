@@ -5,8 +5,8 @@ import timm
 
 class EfficientNetB5(nn.Module):
     """
-    EfficientNet-B5 백본을 사용하여 (x, skip_feats) 반환
-    skip_feats: [p2, p3, p4, p5] - decoder에서 skip connection으로 사용됨
+    EfficientNet-B5 backbone, returen (x, skip_feats)
+    skip_feats: [p2, p3, p4, p5] - skip connection in decoder
     """
     def __init__(self, in_channels, output_stride, BatchNorm, pretrained=True):
         super(EfficientNetB5, self).__init__()
@@ -25,5 +25,5 @@ class EfficientNetB5(nn.Module):
         p3 = features[1]  # stride 8
         p4 = features[2]  # stride 16
         p5 = features[3]  # stride 32
-        p6 = features[4]  # stride 32 (ASPP 입력)
+        p6 = features[4]  # stride 32 (ASPP input)
         return p6, [p2, p3, p4, p5]
