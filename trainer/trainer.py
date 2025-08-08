@@ -7,7 +7,7 @@ import time
 import numpy as np
 from monai.metrics import DiceMetric
 from monai.metrics import compute_iou
-from train.utils import control_random_seed
+from utils.utils import control_random_seed
 
 def DiceBCELoss(pred, target):
     bce = nn.BCEWithLogitsLoss()(pred, target)
