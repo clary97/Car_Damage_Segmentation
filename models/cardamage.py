@@ -1,10 +1,14 @@
-# models/DeepLab_V3_Plus_Effi_USE_Trans2.py
+# models/cardamage.py
+# (기존 'DeepLab_V3_Plus_Effi_USE_Trans2.py' 코드와 동일)
+# import 경로만 상대경로로 수정
+# from backbones... -> from .backbones...
+# from models.modules... -> from .modules...
 import torch
 import torch.nn as nn
-from backbones.efficientnet import EfficientNetB5
-from models.modules.aspp import build_aspp
-from models.modules.decoder import build_decoder
-from models.modules.sync_batchnorm import SynchronizedBatchNorm2d
+from .backbones.efficientnet import EfficientNetB5
+from .modules.aspp import build_aspp
+from .modules.decoder import build_decoder
+from .modules.sync_batchnorm import SynchronizedBatchNorm2d
 
 class DeepLab_V3_Plus_Effi_USE_Trans2(nn.Module):
     def __init__(self, num_classes=6, backbone='efficientnet_b5', output_stride=16, sync_bn=True, freeze_bn=False):

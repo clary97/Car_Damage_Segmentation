@@ -1,119 +1,93 @@
-# train/trainer.py
-
-import torch
-import torch.nn as nn
-from tqdm import tqdm
+# trainer/trainer.py
+import os
 import time
+from datetime import datetime
 import numpy as np
-from monai.metrics import DiceMetric
-from monai.metrics import compute_iou
-from utils.utils import control_random_seed
+import torch
+from utils.utils import AverageMeter
+from utils.metrics import pixel_accuracy, iou_score, dice_coefficient
 
-def DiceBCELoss(pred, target):
-    bce = nn.BCEWithLogitsLoss()(pred, target)
-    smooth = 1.
-    pred = torch.sigmoid(pred)
-    pred = pred.view(-1)
-    target = target.view(-1)
-    intersection = (pred * target).sum()
-    dice = (2. * intersection + smooth) / (pred.sum() + target.sum() + smooth)
-    return bce + (1 - dice)
+class Trainer:
+    def __init__(self, model, criterion, optimizer, scheduler, device, config):
+        self.model = model
+        self.criterion = criterion
+        self.optimizer = optimizer
+        self.scheduler = scheduler
+        self.device = device
+        self.config = config
 
-def evaluate(model, dataloader, device):
-    model.eval()
-    dice_metric = DiceMetric(include_background=False, reduction="mean")
-    iou_list = []
-    loss_list = []
-    
-    with torch.no_grad():
-        for batch in dataloader:
-            images = batch['image'].to(device)
-            masks = batch['mask'].to(device)
-
-            outputs = model(images)
-            loss = DiceBCELoss(outputs, masks)
-            loss_list.append(loss.item())
-
-            probs = torch.sigmoid(outputs) > 0.5
-            dice_metric(y_pred=probs, y=masks)
-            iou = compute_iou(y_pred=probs, y=masks, include_background=False).mean().item()
-            iou_list.append(iou)
-
-    dice = dice_metric.aggregate().item()
-    iou = np.mean(iou_list)
-    val_loss = np.mean(loss_list)
-    dice_metric.reset()
-    return val_loss, dice, iou
-
-def Do_Experiment(seed, model_name, model, train_loader, val_loader, test_loader,
-                  optimizer_type, lr, num_classes, epochs, metric_names, df, device, output_dir):
-    print(f"🚀 Training {model_name} with seed {seed}")
-    control_random_seed(seed)
-
-    optimizer = getattr(torch.optim, optimizer_type)(model.parameters(), lr=lr, weight_decay=1e-4)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-6)
-
-    best_dice = -1
-    best_epoch = 0
-    best_model_state = None
-
-    total_start = time.time()
-    for epoch in range(epochs):
-        model.train()
-        epoch_loss = 0
-        pbar = tqdm(train_loader, desc=f"[Epoch {epoch+1}/{epochs}]", leave=False)
-
-        for batch in pbar:
-            images = batch['image'].to(device)
-            masks = batch['mask'].to(device)
-
-            optimizer.zero_grad()
-            outputs = model(images)
-            loss = DiceBCELoss(outputs, masks)
+    def _train_epoch(self, loader):
+        self.model.train()
+        losses = AverageMeter()
+        for images, masks in loader:
+            images, masks = images.to(self.device), masks.to(self.device)
+            self.optimizer.zero_grad()
+            outputs = self.model(images)
+            loss = self.criterion(outputs, masks)
             loss.backward()
-            optimizer.step()
+            self.optimizer.step()
+            losses.update(loss.item(), images.size(0))
+        return losses.avg
 
-            epoch_loss += loss.item()
-            pbar.set_postfix({'loss': loss.item()})
+    def _validate(self, loader):
+        self.model.eval()
+        all_outputs, all_targets = [], []
+        with torch.no_grad():
+            for images, targets in loader:
+                images, targets = images.to(self.device), targets.to(self.device)
+                outputs = self.model(images)
+                all_outputs.append(outputs.cpu())
+                all_targets.append(targets.cpu())
+        return torch.cat(all_outputs), torch.cat(all_targets)
 
-        scheduler.step()
+    def run(self, train_loader, val_loader, test_loader, output_dir):
+        best_loss = float('inf')
+        best_epoch = 0
+        early_stop_counter = 0
+        train_start_time = time.time()
 
-        # Validation
-        val_loss, val_dice, val_iou = evaluate(model, val_loader, device)
-        if val_dice > best_dice:
-            best_dice = val_dice
-            best_epoch = epoch
-            best_model_state = model.state_dict()
+        for epoch in range(1, self.config['epochs'] + 1):
+            train_loss = self._train_epoch(train_loader)
+            outputs, targets = self._validate(val_loader)
+            val_loss = self.criterion(outputs, targets).item()
 
-        print(f"📌 Epoch {epoch+1}: Val Loss={val_loss:.4f}, Dice={val_dice:.4f}, IoU={val_iou:.4f}")
+            iou = iou_score(outputs, targets)
+            dice = dice_coefficient(outputs, targets)
+            
+            print(f"Epoch {epoch}/{self.config['epochs']} | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | IoU: {iou:.4f} | Dice: {dice:.4f}")
 
-    total_time = time.time() - total_start
+            if val_loss < best_loss:
+                best_loss = val_loss
+                best_epoch = epoch
+                early_stop_counter = 0
+                torch.save(self.model.state_dict(), os.path.join(output_dir, "best_model.pth"))
+                print(f"  >> Best model saved. Val Loss: {best_loss:.4f}")
+            else:
+                early_stop_counter += 1
 
-    # evaluate : test dataset
-    model.load_state_dict(best_model_state)
-    test_loss, test_dice, test_iou = evaluate(model, test_loader, device)
+            self.scheduler.step()
+            if early_stop_counter >= self.config['early_stop']:
+                print(f"Early stopping at epoch {epoch}.")
+                break
+        
+        # --- Testing Phase ---
+        print("\n--- Testing ---")
+        self.model.load_state_dict(torch.load(os.path.join(output_dir, "best_model.pth")))
+        outputs, targets = self._validate(test_loader)
+        test_loss = self.criterion(outputs, targets).item()
+        test_pa = pixel_accuracy(outputs, targets)
+        test_iou = iou_score(outputs, targets)
+        test_dice = dice_coefficient(outputs, targets)
+        
+        print(f"Test Loss: {test_loss:.4f}, PA: {test_pa:.4f}, IoU: {test_iou:.4f}, Dice: {test_dice:.4f}")
 
-    # save results
-    result = {
-        'Experiment Time': time.strftime('%y%m%d_%H%M%S'),
-        'Train Time': f"{total_time:.1f}s",
-        'Iteration': seed,
-        'Model Name': model_name,
-        'Val_Loss': f"{val_loss:.4f}",
-        'Test_Loss': f"{test_loss:.4f}",
-        'PA': '-',
-        'IoU': f"{test_iou:.4f}",
-        'Dice': f"{test_dice:.4f}",
-        'Recall': '-', 'Precision': '-', 'F1 Score': '-',
-        'Total Params': sum(p.numel() for p in model.parameters()),
-        'Train-Prediction Time': '-', 'Best Epoch': best_epoch,
-        'Time per Epoch': f"{total_time / epochs:.2f}",
-        'Loss Function': 'DiceBCELoss',
-        'LR': lr,
-        'Batch size': train_loader.batch_size,
-        '#Epochs': epochs,
-        'DIR': output_dir
-    }
-
-    df.loc[len(df)] = result
-    return df
+        results = {
+            'Val_Loss': best_loss,
+            'Test_Loss': test_loss,
+            'PA': test_pa,
+            'IoU': test_iou,
+            'Dice': test_dice,
+            'Best Epoch': best_epoch,
+            'Total Time': f"{time.time() - train_start_time:.2f}s"
+        }
+        return results

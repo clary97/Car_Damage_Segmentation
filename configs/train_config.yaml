@@ -1,0 +1,30 @@
+# loss_function:
+#   name: DiceBCELoss
+#   gamma: 2.0
+#   reduction: mean
+
+model_name: "DeepLab_V3_Plus_Effi_U_Trans2"
+in_channels: 3
+num_classes: 1
+
+# --- Training Parameters ---
+iterations: [1, 10]
+epochs: 100
+early_stop: 25
+batch_size: 8
+
+# --- Optimizer ---
+optimizer: "AdamW"
+lr: 0.0001
+momentum: 0.9
+weight_decay: 0.0001
+
+# --- Scheduler ---
+scheduler:
+  type: "CosineAnnealingLR"
+  T_max: 100
+  eta_min: 0.000001
+
+# --- Loss Function ---
+loss_function:
+  name: "DiceBCELoss"
