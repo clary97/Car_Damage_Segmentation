@@ -9,7 +9,7 @@ import torch
 # 프로젝트 루트를 경로에 추가
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from config.loader import load_config
+from configs.loader import load_config
 from dataset.dataset import get_dataloaders
 from models import get_model
 from trainer.trainer import Trainer
@@ -18,7 +18,7 @@ from utils.losses import DiceBCELoss
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default='config/train_config.yaml')
+    parser.add_argument('--config', type=str, default='configs/train_config.yaml')
     parser.add_argument('--gpu', type=str, default='0')
     args = parser.parse_args()
     
