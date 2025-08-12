@@ -53,7 +53,7 @@ cd Car_Damage_Segmentation
 
 #### 2. Download the Dataset
 
-This project uses the **[Car Damage Dataset (CarDD)](https://cardd-ustc.github.io/)**. Please download the dataset from the link below and extract it so that the `CarDD_release` folder is located in the project's root directory.
+This project uses the **[Car Damage Dataset (CarDD)](https://cardd-ustc.github.io/)**. Please download the dataset from the link below and extract it so that the `CarDD_release` folder is located in the project's root/dataset directory.
 
 * **Download Link**: https://drive.google.com/file/d/1bbyqVCKZX5Ur5Zg-uKj0jD0maWAVeOLx/view
 
