@@ -69,9 +69,10 @@ def get_dataloaders(base_dir, batch_size):
         for ann in coco_data["annotations"]:
             image_id = ann["image_id"]
             annotations.setdefault(image_id, []).append(ann)
-
+        
         is_train = (phase == "training")
         dataset = COCODataset(images, annotations, image_dir=sub_dir, aug=is_train)
+        
         loaders[phase] = DataLoader(
             dataset,
             batch_size=batch_size,
@@ -79,4 +80,5 @@ def get_dataloaders(base_dir, batch_size):
             num_workers=4,
             pin_memory=True
         )
+
     return loaders['training'], loaders['validation'], loaders['test']

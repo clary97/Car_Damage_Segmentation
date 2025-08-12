@@ -3,12 +3,14 @@
 #   gamma: 2.0
 #   reduction: mean
 
-model_name: "DeepLab_V3_Plus_Effi_U_Trans2"
+model_name: "DeepLab_V3_Plus_Effi_USE_Trans2"
 in_channels: 3
 num_classes: 1
 
 # --- Training Parameters ---
-iterations: [1, 10]
+iterations: 
+  start : 1
+  end : 10
 epochs: 100
 early_stop: 25
 batch_size: 8
