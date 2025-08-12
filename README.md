@@ -63,6 +63,10 @@ Car_Damage_Segmentation/
 ├── dataset/
 │   └── CarDD_release/
 │       ├── CarDD_COCO
+│       │   ├── annotations/
+│       │   ├── train2017/
+│       │   ├── val2017/
+│       │   └── test2017/
 │       └── CarDD_SOD
 ├── configs/
 ├── experiments/
@@ -85,6 +89,18 @@ Once the virtual environment is activated, run the following command to install 
 ```bash
 pip install -r requirements.txt
 ```
+
+#### 5. Create Data Splits
+This project uses 10 independent dataset splits for robust 10-fold cross-validation. The provided `dataset/create_dataset_splits.py` script automates the process of splitting the original COCO dataset into 10 different versions of training (60%), validation (20%), and test (20%) sets.
+
+Run the script using the following command:
+
+```bash
+# Run the splitting script
+python create_dataset_splits.py
+```
+After the script finishes, 10 split datasets, from `split01` to `split10`, will be created inside the `CarDD_release/splits` folder.
+
 ---
 ## 🚀 Usage
 
