@@ -62,9 +62,8 @@ The final folder structure should look like this:
 Car_Damage_Segmentation/
 ├── dataset/
 │   └── CarDD_release/
-│       └── splits/
-│           ├── split01/
-│           └── ...
+│       ├── CarDD_COCO
+│       └── CarDD_SOD
 ├── configs/
 ├── experiments/
 └── ...
