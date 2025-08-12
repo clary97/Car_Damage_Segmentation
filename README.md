@@ -85,7 +85,7 @@ Once the virtual environment is activated, run the following command to install 
 ```bash
 pip install -r requirements.txt
 ```
-
+---
 ## 🚀 Usage
 
 ### Training
