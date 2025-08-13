@@ -97,7 +97,7 @@ Run the script using the following command:
 
 ```bash
 # Run the splitting script
-python create_dataset_splits.py
+python dataset/create_dataset_splits.py
 ```
 After the script finishes, 10 split datasets, from `split01` to `split10`, will be created inside the `CarDD_release/splits` folder.
 
